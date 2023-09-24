@@ -20,8 +20,8 @@ namespace TelegramBotExperiments
         private static string Login = string.Empty;
         private static string Password =string.Empty;
         private static List<string> HeroesToSearch = new List<string>();
-        private const string acc2sUri = "https://back-adm.acc2s.shop/v1/api/user/login";
-        private const string apiUrl = "https://back-adm.acc2s.shop/v1/api/shop/account_search";
+        private const string acc2sLoginUri = "https://back-adm.acc2s.shop/v1/api/user/login";
+        private const string acc2sSearchUri = "https://back-adm.acc2s.shop/v1/api/shop/account_search";
         private static readonly HttpClient client = new HttpClient();
         
         enum UserState
@@ -76,11 +76,13 @@ namespace TelegramBotExperiments
                         Console.WriteLine($"Received heroes to search");
             
                         await botClient.SendTextMessageAsync(message.Chat.Id, "Data received! Thank you.");
+                        // Assuming your HeroesToSearch has been filled somewhere above in your code
                         foreach (string heroPair in HeroesToSearch)
                         {
-                            RecurringJob.AddOrUpdate(heroPair, () => SendRequests(botClient, update, heroPair), "*/5 * * * *");
+                            string jobId = GetJobIdForHeroPair(heroPair); // This function will create a unique jobId for each hero pair.
+                            RecurringJob.AddOrUpdate(jobId, () => ProcessHeroPairJob(message.Chat.Id, heroPair), "*/5 * * * *");
                         }
-
+                        
                         currentState = UserState.None;
                         break;
 
@@ -92,9 +94,23 @@ namespace TelegramBotExperiments
 
         }
 
-        public static async Task SendRequests(ITelegramBotClient botClient, Update update, string heroPair)
+        // This method will generate a unique jobId based on the hero pair.
+        private static string GetJobIdForHeroPair(string heroPair)
         {
-            var message = update.Message;
+            return $"SendRequestsFor-{heroPair.Replace(",", "-").Replace(" ", "_")}"; // This is just a basic transformation. Make sure it returns valid jobIds.
+        }
+        public static async Task ProcessHeroPairJob(long chatId, string heroPair)
+        {
+            // Get the current update and botClient. This might need adjustments based on your specific setup.
+            // NOTE: Directly accessing update might not be feasible. You might need a different way to get the required context.
+            
+            ITelegramBotClient currentBotClient = bot;
+    
+            await SendRequests(currentBotClient, chatId, heroPair);
+        }
+
+        public static async Task SendRequests(ITelegramBotClient botClient, long chatId, string heroPair)
+        {
             ///////////////////////////////////////////////////////////////////////login///////////////////////////////////////////////////////////////////////////
             var loginPayload = new 
             {
@@ -105,7 +121,7 @@ namespace TelegramBotExperiments
             string loginJsonPayload = JsonConvert.SerializeObject(loginPayload);
             HttpContent loginContent = new StringContent(loginJsonPayload, Encoding.UTF8, "application/json");
                         
-            HttpResponseMessage loginResponse = await client.PostAsync(acc2sUri, loginContent);
+            HttpResponseMessage loginResponse = await client.PostAsync(acc2sLoginUri, loginContent);
                         
             string jwtToken = string.Empty;
                         
@@ -120,7 +136,7 @@ namespace TelegramBotExperiments
             else
             {
                 Console.WriteLine("Failed to login.");
-                await botClient.SendTextMessageAsync(message.Chat.Id, "Failed to login.");
+                await botClient.SendTextMessageAsync(chatId, "Failed to login.");
             }
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             ///////////////////////////////////////////////////////////////////////search///////////////////////////////////////////////////////////////////////////
@@ -144,7 +160,7 @@ namespace TelegramBotExperiments
                 client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwtToken);
             }
             // Send the POST request
-            HttpResponseMessage searchResponse = await client.PostAsync(apiUrl, searchContent);
+            HttpResponseMessage searchResponse = await client.PostAsync(acc2sSearchUri, searchContent);
             var responseText = await searchResponse.Content.ReadAsStringAsync();
             if (searchResponse.IsSuccessStatusCode)
             {
@@ -163,7 +179,7 @@ namespace TelegramBotExperiments
             int accountCount = searchResponseObj.count;
             if (accountCount > 0)
             {
-                await botClient.SendTextMessageAsync(message.Chat.Id, $"Found {accountCount} accounts! With heroes: {heroPair}");
+                await botClient.SendTextMessageAsync(chatId, $"Found {accountCount} accounts! With heroes: {heroPair}");
             }
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         }
