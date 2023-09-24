@@ -22,6 +22,7 @@ namespace TelegramBotExperiments
         private static List<string> HeroesToSearch = new List<string>();
         private const string acc2sLoginUri = "https://back-adm.acc2s.shop/v1/api/user/login";
         private const string acc2sSearchUri = "https://back-adm.acc2s.shop/v1/api/shop/account_search";
+        private static List<string> jobIds= new List<string>();
         private static readonly HttpClient client = new HttpClient();
         
         enum UserState
@@ -47,6 +48,16 @@ namespace TelegramBotExperiments
                     // Prompt user for their login
                     await botClient.SendTextMessageAsync(message.Chat.Id, "Please provide your login for acc2s:");
                     currentState = UserState.AwaitingLogin;
+                    return;
+                }
+                if(message.Text.ToLower() == "/stop")
+                {
+                    foreach (var jobId in jobIds)
+                    {
+                        RecurringJob.RemoveIfExists(jobId);
+                    }
+                    await botClient.SendTextMessageAsync(message.Chat.Id, "Bot stopped!");
+                    Console.WriteLine($@"Bot stopped {jobIds.Count} jobs!");
                     return;
                 }
 
@@ -80,8 +91,10 @@ namespace TelegramBotExperiments
                         foreach (string heroPair in HeroesToSearch)
                         {
                             string jobId = GetJobIdForHeroPair(heroPair); // This function will create a unique jobId for each hero pair.
+                            jobIds.Add(jobId);
                             RecurringJob.AddOrUpdate(jobId, () => ProcessHeroPairJob(message.Chat.Id, heroPair), "*/5 * * * *");
                         }
+                        Console.WriteLine($@"Bot started {jobIds.Count} recurring jobs!");
                         
                         currentState = UserState.None;
                         break;
@@ -165,7 +178,6 @@ namespace TelegramBotExperiments
             if (searchResponse.IsSuccessStatusCode)
             {
                 Console.WriteLine("Successfully sent the request!");
-                Console.WriteLine(responseText);
             }
             else
             {
