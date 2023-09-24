@@ -4,15 +4,14 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Exceptions;
+using System.Text;
+using Hangfire;
+using Hangfire.MemoryStorage;
+using Newtonsoft.Json;
+using Telegram.Bot.Polling;
 
 namespace TelegramBotExperiments
 {
-    using System.Text;
-    using Hangfire;
-    using Hangfire.MemoryStorage;
-    using Newtonsoft.Json;
-    using Telegram.Bot.Polling;
-
     class Program
     {
         static ITelegramBotClient bot = new TelegramBotClient("6566550775:AAH3bi5csUbjyKyasA9Fdd0ccAN-2mPhiJY");
@@ -20,9 +19,9 @@ namespace TelegramBotExperiments
         private static string Login = string.Empty;
         private static string Password =string.Empty;
         private static List<string> HeroesToSearch = new List<string>();
+        private static List<string> jobIds= new List<string>();
         private const string acc2sLoginUri = "https://back-adm.acc2s.shop/v1/api/user/login";
         private const string acc2sSearchUri = "https://back-adm.acc2s.shop/v1/api/shop/account_search";
-        private static List<string> jobIds= new List<string>();
         private static readonly HttpClient client = new HttpClient();
         
         enum UserState
@@ -35,8 +34,6 @@ namespace TelegramBotExperiments
         
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            // Некоторые действия
-
             if(update.Type == Telegram.Bot.Types.Enums.UpdateType.Message)
             {
                 var message = update.Message;
@@ -124,7 +121,7 @@ namespace TelegramBotExperiments
 
         public static async Task SendRequests(ITelegramBotClient botClient, long chatId, string heroPair)
         {
-            ///////////////////////////////////////////////////////////////////////login///////////////////////////////////////////////////////////////////////////
+            //login
             var loginPayload = new 
             {
                 username = Login,
@@ -152,7 +149,7 @@ namespace TelegramBotExperiments
                 await botClient.SendTextMessageAsync(chatId, "Failed to login.");
             }
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            ///////////////////////////////////////////////////////////////////////search///////////////////////////////////////////////////////////////////////////
+            //search
             var payload = new 
             {
                 search = heroPair,
@@ -193,7 +190,6 @@ namespace TelegramBotExperiments
             {
                 await botClient.SendTextMessageAsync(chatId, $"Found {accountCount} accounts! With heroes: {heroPair}");
             }
-            ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         }
 
         private static List<string> HeroesTextMessageToList(string messageText)
@@ -208,11 +204,9 @@ namespace TelegramBotExperiments
 
         public static async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
-            // Некоторые действия
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(exception));
         }
-
-
+        
         static void Main(string[] args)
         {
             // Initialize Hangfire configuration to use MemoryStorage
