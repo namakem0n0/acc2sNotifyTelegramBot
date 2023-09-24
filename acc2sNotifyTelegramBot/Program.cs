@@ -17,7 +17,7 @@ namespace TelegramBotExperiments
         static ITelegramBotClient bot = new TelegramBotClient("6566550775:AAH3bi5csUbjyKyasA9Fdd0ccAN-2mPhiJY");
         private static UserState currentState = UserState.None;
         private static string Login = string.Empty;
-        private static string Password =string.Empty;
+        private static string Password = string.Empty;
         private static List<string> HeroesToSearch = new List<string>();
         private static List<string> jobIds= new List<string>();
         private const string acc2sLoginUri = "https://back-adm.acc2s.shop/v1/api/user/login";
@@ -53,6 +53,8 @@ namespace TelegramBotExperiments
                     {
                         RecurringJob.RemoveIfExists(jobId);
                     }
+                    HeroesToSearch = new List<string>();
+                    jobIds = new List<string>();
                     await botClient.SendTextMessageAsync(message.Chat.Id, "Bot stopped!");
                     Console.WriteLine($@"Bot stopped {jobIds.Count} jobs!");
                     return;
@@ -186,9 +188,10 @@ namespace TelegramBotExperiments
 
             // Extract the count value.
             int accountCount = searchResponseObj.count;
+            var parsedString = heroPair.Replace(",", " + ");
             if (accountCount > 0)
             {
-                await botClient.SendTextMessageAsync(chatId, $"Found {accountCount} accounts! With heroes: {heroPair}");
+                await botClient.SendTextMessageAsync(chatId, $"Found {accountCount} accounts! With heroes: {parsedString}");
             }
         }
 
